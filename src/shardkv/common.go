@@ -9,6 +9,9 @@ package shardkv
 // You will have to modify these definitions.
 //
 
+import "6.5840/shardctrler"
+import "log"
+
 const (
 	OK             = "OK"
 	ErrNoKey       = "ErrNoKey"
@@ -27,6 +30,8 @@ type PutAppendArgs struct {
 	// You'll have to add definitions here.
 	// Field names must start with capital letters,
 	// otherwise RPC will break.
+	ClientId int64
+	Seq int64
 }
 
 type PutAppendReply struct {
@@ -36,9 +41,66 @@ type PutAppendReply struct {
 type GetArgs struct {
 	Key string
 	// You'll have to add definitions here.
+	ClientId int64
+	Seq int64
 }
 
 type GetReply struct {
 	Err   Err
 	Value string
+}
+
+type UpdateConfigArgs struct {
+	Config shardctrler.Config
+
+	ClientId int64
+	Seq int64
+}
+
+type UpdateConfigReply struct {
+	Err Err
+}
+
+type RequestMigrationArgs struct {
+	Shards []int
+
+	ClientId int64
+	Seq int64
+}
+
+type RequestMigrationReply struct {
+	Err Err
+
+	ShardData map[int]map[string]string
+}
+
+type InsertShardArgs struct {
+	ShardData map[int]map[string]string
+
+	ClientId int64
+	Seq int64
+}
+
+type InsertShardReply struct {
+	Err Err
+}
+
+type NotifyMigrationSucceedArgs struct {
+	Shards []int
+
+	ClientId int64
+	Seq int64
+}
+
+type NotifyMigrationSucceedReply struct {
+	Err Err
+}
+
+const Debug = true
+
+func DPrintf(format string, a ...interface{}) (n int, err error) {
+	if Debug {
+		log.Printf(format, a...)
+	}
+	return
 }

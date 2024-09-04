@@ -14,6 +14,8 @@ import "time"
 import "math/rand"
 import "sync/atomic"
 import "sync"
+import "net/http"
+import _ "net/http/pprof"
 
 // The tester generously allows solutions to complete elections in one second
 // (much more than the paper's range of timeouts).
@@ -66,6 +68,7 @@ func TestReElection2A(t *testing.T) {
 	// if the old leader rejoins, that shouldn't
 	// disturb the new leader. and the old leader
 	// should switch to follower.
+	DPrintf("------------------------------Step 1: Reconnect leader%v-----------------------------", leader1)
 	cfg.connect(leader1)
 	leader2 := cfg.checkOneLeader()
 
@@ -73,6 +76,8 @@ func TestReElection2A(t *testing.T) {
 	// be elected.
 	cfg.disconnect(leader2)
 	cfg.disconnect((leader2 + 1) % servers)
+	DPrintf("------------------------------Step 2: Disconnect leader%v-----------------------------", leader2)
+	DPrintf("------------------------------Step 2: Disconnect leader%v-----------------------------", (leader2 + 1) % servers)
 	time.Sleep(2 * RaftElectionTimeout)
 
 	// check that the one connected server
@@ -81,10 +86,12 @@ func TestReElection2A(t *testing.T) {
 
 	// if a quorum arises, it should elect a leader.
 	cfg.connect((leader2 + 1) % servers)
+	DPrintf("------------------------------Step 3: Reconnect leader%v-----------------------------", (leader2 + 1) % servers)
 	cfg.checkOneLeader()
 
 	// re-join of last node shouldn't prevent leader from existing.
 	cfg.connect(leader2)
+	DPrintf("------------------------------Step 4: Reconnect leader%v-----------------------------", leader2)
 	cfg.checkOneLeader()
 
 	cfg.end()
@@ -109,6 +116,10 @@ func TestManyElections2A(t *testing.T) {
 		cfg.disconnect(i2)
 		cfg.disconnect(i3)
 
+		DPrintf("------------------------------Disconnect leader%v-----------------------------", i1)
+		DPrintf("------------------------------Disconnect leader%v-----------------------------", i2)
+		DPrintf("------------------------------Disconnect leader%v-----------------------------", i3)
+
 		// either the current leader should still be alive,
 		// or the remaining four should elect a new one.
 		cfg.checkOneLeader()
@@ -116,6 +127,11 @@ func TestManyElections2A(t *testing.T) {
 		cfg.connect(i1)
 		cfg.connect(i2)
 		cfg.connect(i3)
+
+		
+		DPrintf("------------------------------Reconnect leader%v-----------------------------", i1)
+		DPrintf("------------------------------Reconnect leader%v-----------------------------", i2)
+		DPrintf("------------------------------Reconnect leader%v-----------------------------", i3)
 	}
 
 	cfg.checkOneLeader()
@@ -527,6 +543,7 @@ func TestBackup2B(t *testing.T) {
 
 	// now another partitioned leader and one follower
 	leader2 := cfg.checkOneLeader()
+	DPrintf("leader2 is %v", leader2)
 	other := (leader1 + 2) % servers
 	if leader2 == other {
 		other = (leader2 + 1) % servers
@@ -547,6 +564,8 @@ func TestBackup2B(t *testing.T) {
 	cfg.connect((leader1 + 0) % servers)
 	cfg.connect((leader1 + 1) % servers)
 	cfg.connect(other)
+
+	DPrintf("Bring original leader back to life, leader 1: %v", leader1)
 
 	// lots of successful commands to new group.
 	for i := 0; i < 50; i++ {
@@ -1098,6 +1117,11 @@ func TestUnreliableChurn2C(t *testing.T) {
 const MAXLOGSIZE = 2000
 
 func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash bool) {
+
+	go func() {
+		http.ListenAndServe(":6060", nil)
+	 }()
+
 	iters := 30
 	servers := 3
 	cfg := make_config(t, servers, !reliable, true)
@@ -1109,6 +1133,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 	leader1 := cfg.checkOneLeader()
 
 	for i := 0; i < iters; i++ {
+		DPrintf("Iteration: %v", i + 1)
 		victim := (leader1 + 1) % servers
 		sender := leader1
 		if i%3 == 1 {

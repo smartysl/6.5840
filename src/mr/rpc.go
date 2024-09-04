@@ -23,6 +23,21 @@ type ExampleReply struct {
 }
 
 // Add your RPC definitions here.
+type JobRequestArgs struct {
+
+}
+
+type JobRequestReply struct {
+	Job *Job
+}
+
+type NotifyJobDoneArgs struct {
+	Job *Job
+}
+
+type NotifyJobDoneReply struct {
+
+}
 
 
 // Cook up a unique-ish UNIX-domain socket name
